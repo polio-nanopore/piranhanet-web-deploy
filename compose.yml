@@ -18,6 +18,8 @@ services:
   acme-buddy:
     image: ghcr.io/reside-ic/acme-buddy:main
     container_name: acme-buddy
+    profiles:
+      - proxy
     ports:
       - 2112:2112
     restart: unless-stopped
