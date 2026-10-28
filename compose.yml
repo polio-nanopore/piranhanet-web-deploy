@@ -7,7 +7,7 @@ services:
     pull_policy: always
     restart: unless-stopped
   piranhanet-web:
-    image: ghcr.io/polio-nanopore/piranhanet-web
+    image: ghcr.io/polio-nanopore/piranhanet-web:${WEB_REF:-main}
     container_name: piranhanet-web
     pull_policy: always
     restart: unless-stopped
@@ -39,6 +39,8 @@ services:
   proxy:
     image: nginx:1.31.7
     container_name: proxy
+    profiles:
+      - proxy
     restart: always
     ports:
       - 80:80
@@ -52,5 +54,6 @@ services:
     depends_on:
       - acme-buddy
       - piranhanet-web
+      - piranhanet-api
 volumes:
   piranhanet-tls:
