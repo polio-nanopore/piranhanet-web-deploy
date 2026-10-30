@@ -1,0 +1,25 @@
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS server
+server {
+    listen 443 ssl;
+    server_name ${DOMAIN};
+
+    ssl_certificate /tls/certificate.pem;
+    ssl_certificate_key /tls/key.pem;
+
+    location /api {
+        proxy_pass http://piranhanet-api:8000;
+    }
+
+    location / {
+        proxy_pass http://piranhanet-web:5173;
+    }
+}

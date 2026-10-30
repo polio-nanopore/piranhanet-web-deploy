@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -exEuo pipefail
+
+setup_vault_credentials() {
+    # don't need to do this  if no-proxy
+    if [[ "$DOCKER_COMPOSE_PROFILE" == no-proxy ]]; then
+        return
+    fi
+    echo Setting up vault credentials
+    export VAULT_ADDR=https://vault.dide.ic.ac.uk:8200
+    VAULT_TOKEN=$(vault login -method=github -token-only)
+    export VAULT_TOKEN
+
+    local hdb_username hdb_password
+    hdb_username=$(vault read -field=username "secret/certbot-hdb/credentials")
+    hdb_password=$(vault read -field=password "secret/certbot-hdb/credentials")
+
+    cat > hdb-credentials <<EOF
+HDB_ACME_USERNAME=$hdb_username
+HDB_ACME_PASSWORD=$hdb_password
+EOF
+}
+
+load_env() {
+  echo Loading env
+  set -a
+  source .env
+  set +a
+}
+
+# Main logic
+case "${1:-}" in
+    configure)
+      # copy env
+      \cp ./config/"$2".env .env
+      ;;
+    up)
+        # fail if not configured
+        if [ ! -f .env ]; then
+          echo "Error: not configured. Run ./piranhanet-web-deploy configure [CONFIG NAME]"
+          exit 1
+        fi
+        # load env
+        load_env
+        # write web.config.json
+        echo Writing web config
+        echo '{"apiUrl": "'$API_URL'"}' > web.config.json
+        setup_vault_credentials
+        echo Starting containers
+        docker compose --profile $DOCKER_COMPOSE_PROFILE up -d
+        ;;
+    pull)
+        load_env
+        docker compose --profile $DOCKER_COMPOSE_PROFILE pull
+        ;;
+    down)
+        load_env
+        docker compose --profile $DOCKER_COMPOSE_PROFILE down
+        ;;
+    *)
+        echo "Usage: $0 {configure|up|pull|down}"
+        exit 1
+        ;;
+esac

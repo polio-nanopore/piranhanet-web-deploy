@@ -1,0 +1,61 @@
+services:
+  piranhanet-api:
+    image: ghcr.io/polio-nanopore/piranhanet-api:${API_REF:-main}
+    container_name: piranhanet-api
+    ports:
+      - 8000:8000
+    pull_policy: always
+    restart: unless-stopped
+  piranhanet-web:
+    image: ghcr.io/polio-nanopore/piranhanet-web:${WEB_REF:-main}
+    container_name: piranhanet-web
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - 5173:5173
+    volumes:
+      - ./web.config.json:/app/dist/web.config.json:ro
+  acme-buddy:
+    image: ghcr.io/reside-ic/acme-buddy:main
+    container_name: acme-buddy
+    profiles:
+      - proxy
+    ports:
+      - 2112:2112
+    restart: unless-stopped
+    volumes:
+      - piranhanet-tls:/tls
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - ACME_BUDDY_STAGING
+    env_file:
+      - hdb-credentials
+    command: >
+      --domain ${DOMAIN}
+      --email reside@imperial.ac.uk
+      --dns-provider hdb
+      --certificate-path /tls/certificate.pem
+      --key-path /tls/key.pem
+      --account-path /tls/account.json
+      --reload-container proxy
+  proxy:
+    image: nginx:1.31.7
+    container_name: proxy
+    profiles:
+      - proxy
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+      - 9000:9000
+    environment:
+      - DOMAIN
+    volumes:
+      - ./templates:/etc/nginx/templates
+      - piranhanet-tls:/tls
+    depends_on:
+      - acme-buddy
+      - piranhanet-web
+      - piranhanet-api
+volumes:
+  piranhanet-tls:
