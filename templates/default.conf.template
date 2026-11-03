@@ -15,8 +15,10 @@ server {
     ssl_certificate /tls/certificate.pem;
     ssl_certificate_key /tls/key.pem;
 
-    location /api {
-        proxy_pass http://piranhanet-api:8000;
+    client_max_body_size 100M;
+
+    location /api/ {
+        proxy_pass http://piranhanet-api:8000/;
     }
 
     location / {
