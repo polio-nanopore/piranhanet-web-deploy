@@ -39,7 +39,7 @@ services:
       --account-path /tls/account.json
       --reload-container proxy
   proxy:
-    image: nginx:latest
+    image: nginx:stable
     container_name: proxy
     profiles:
       - proxy
